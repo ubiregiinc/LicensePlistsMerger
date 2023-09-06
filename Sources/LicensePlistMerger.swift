@@ -43,8 +43,7 @@ struct LicensesPlistMerger: ParsableCommand {
             #endif
         }
 
-        let currentURL = URL(filePath: FileManager.default.currentDirectoryPath)
-        let cocoapodsURL = currentURL.appending(path: cocoapodsPlistPath)
+        let cocoapodsURL = URL(filePath: cocoapodsPlistPath)
 
         guard let cocoapodsLicenses = Self.cocoapodsLicenses(fileURL: cocoapodsURL) else {
             print("cocoapods licenses processing error")
@@ -55,7 +54,7 @@ struct LicensesPlistMerger: ParsableCommand {
             #endif
         }
 
-        let licenseListURL = currentURL.appending(path: licenseListPlistPath)
+        let licenseListURL = URL(filePath: licenseListPlistPath)
         guard let licenseListLicenses = Self.licenseListLicenses(fileURL: licenseListURL) else {
             print("LicenseList licenses processing error")
             #if canImport(Darwin)
@@ -73,7 +72,7 @@ struct LicensesPlistMerger: ParsableCommand {
         let name: String
         let directoryURL: URL
         if let output {
-            let rootPlistPath = currentURL.appending(path: output)
+            let rootPlistPath = URL(filePath: output)
             if rootPlistPath.pathExtension == "plist" {
                 name = rootPlistPath.deletingPathExtension().lastPathComponent
             } else {
@@ -82,7 +81,7 @@ struct LicensesPlistMerger: ParsableCommand {
             directoryURL = rootPlistPath.deletingLastPathComponent()
         } else {
             name = Self.name
-            directoryURL = currentURL
+            directoryURL = URL(filePath: FileManager.default.currentDirectoryPath)
         }
 
         try Self.writePlists(name: name, directoryURL: directoryURL, licenses: licenses)
@@ -117,9 +116,7 @@ extension LicensesPlistMerger {
             return LicenseInfo(name: name, body: body.replacingOccurrences(of: "\u{0c}", with: ""))
         }
     }
-}
 
-extension LicensesPlistMerger {
     static func writePlists(name: String, directoryURL: URL, licenses: [LicenseInfo]) throws {
         let childrenDirectory = directoryURL.appending(path: name, directoryHint: .isDirectory)
 

@@ -121,7 +121,7 @@ extension LicensesPlistMerger {
         let childrenDirectory = directoryURL.appending(path: name, directoryHint: .isDirectory)
 
         do {
-            try FileManager.default.createDirectory(at: childrenDirectory, withIntermediateDirectories: false)
+            try FileManager.default.createDirectory(at: childrenDirectory, withIntermediateDirectories: true)
         } catch {
             let error = error as NSError
             if error.domain != NSCocoaErrorDomain || error.code != NSFileWriteFileExistsError {

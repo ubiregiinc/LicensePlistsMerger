@@ -133,6 +133,8 @@ extension LicensesPlistMerger {
             try Self.writeChildPlist(directoryURL: childrenDirectory, license: license)
         }
 
+        try Self.deleteOrphanPlists(directoryURL: childrenDirectory, licenses: licenses)
+
         try Self.writeRootPlist(name: name, licenses: licenses, url: directoryURL)
     }
 
@@ -156,6 +158,19 @@ extension LicensesPlistMerger {
 
         try plist.write(to: directoryURL.appending(path: "\(license.name).plist"))
         print(license.name)
+    }
+
+    /// なくなったライブラリのファイルを削除する
+    static func deleteOrphanPlists(directoryURL: URL, licenses: [LicenseInfo]) throws {
+        let urls = try FileManager.default.contentsOfDirectory(at: directoryURL,
+                                                               includingPropertiesForKeys: nil)
+
+        for url in urls {
+            let fileName = url.deletingPathExtension().lastPathComponent
+            if !licenses.contains(where: { $0.name == fileName }) {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
     }
 }
 

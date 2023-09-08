@@ -14,13 +14,39 @@ import Darwin
 
 @main
 struct LicensesPlistMerger: ParsableCommand {
-    static let name = "Acknowledgements"
+    enum Style {
+        case licensePlist
+        case licenseList
+
+        init?(string: String) {
+            switch string {
+            case "LicensePlist", "licensePlist", "license-plist":
+                self = .licensePlist
+            case "LicenseList", "licenseList", "license-list":
+                self = .licenseList
+            default:
+                return nil
+            }
+        }
+
+        var fileName: String {
+            switch self {
+            case .licensePlist:
+                return "Acknowledgements"
+            case .licenseList:
+                return "license-list"
+            }
+        }
+    }
 
     @Option(name: .long, help: "CocoaPodsのplistのpath")
     var cocoapodsPlistPath: String?
 
     @Option(name: .long, help: "LicenseListのplistのpath")
     var licenseListPlistPath: String?
+
+    @Option(name: .long, help: "出力するplistのスタイル(license-plist/license-list)")
+    var style: String?
 
     @Option(name: .short, help: "output")
     var output: String?
@@ -69,6 +95,13 @@ struct LicensesPlistMerger: ParsableCommand {
             return lhs.name.localizedCompare(rhs.name) == .orderedAscending
         }
 
+        let plistStyle: Style
+        if let style {
+            plistStyle = Style(string: style) ?? .licensePlist
+        } else {
+            plistStyle = .licensePlist
+        }
+
         let name: String
         let directoryURL: URL
         if let output {
@@ -80,11 +113,16 @@ struct LicensesPlistMerger: ParsableCommand {
             }
             directoryURL = rootPlistPath.deletingLastPathComponent()
         } else {
-            name = Self.name
+            name = plistStyle.fileName
             directoryURL = URL(filePath: FileManager.default.currentDirectoryPath)
         }
 
-        try Self.writePlists(name: name, directoryURL: directoryURL, licenses: licenses)
+        switch plistStyle {
+        case .licensePlist:
+            try Self.writePlists(name: name, directoryURL: directoryURL, licenses: licenses)
+        case .licenseList:
+            try Self.mergedLicenseListPlist(url: directoryURL.appending(path: "\(name).plist"), licenses: licenses)
+        }
     }
 }
 
@@ -171,6 +209,17 @@ extension LicensesPlistMerger {
                 try? FileManager.default.removeItem(at: url)
             }
         }
+    }
+
+    static func mergedLicenseListPlist(url: URL, licenses: [LicenseInfo]) throws {
+        let dictionary: [String: [[String: String]]] = [
+            "libraries": licenses.map { ["name": $0.name, "licenseBody": $0.body] }
+        ]
+
+        let plist = try PropertyListSerialization.data(fromPropertyList: dictionary, format: .xml, options: .zero)
+        try plist.write(to: url)
+
+        licenses.forEach { print($0.name) }
     }
 }
 

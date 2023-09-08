@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "LicensesPlistMerger",
+    name: "LicensePlistsMerger",
     platforms: [
         .macOS(.v13),
     ],

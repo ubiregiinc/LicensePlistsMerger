@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0",
+  "artifacts": {
+    "license-plists-merger": {
+      "version": "__VERSION__",
+      "type": "executable",
+      "variants": [
+        {
+          "path": "license-plists-merger-__VERSION__-macos/bin/license-plists-merger",
+          "suportedTriples": [
+            "x86_64-apple-macosx",
+            "arm64-apple-macosx"
+          ]
+        }
+      ]
+    }
+  }
+}

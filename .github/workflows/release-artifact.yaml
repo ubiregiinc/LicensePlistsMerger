@@ -28,11 +28,12 @@ jobs:
       
       - name: Create Artifact Bundle
         run: |
+          set -x
           mkdir -p "${ARTIFACT_BUNDLE_PATH}"
           sed "s/__VERSION__/${{ github.ref_name }}/g" info.json.template > "${ARTIFACT_BUNDLE}/info.json"
           cp -f .build/apple/Products/Release/license-plists-merger "${ARTIFACT_BUNDLE_PATH}"
           cp -f LICENSE "${ARTIFACT_BUNDLE_PATH}"
-          zip -yr - "${ARTIFACT_BUNDLE}" > "./license-plists-merger-macos.artifactbundle.zip"
+          zip -yr - "${ARTIFACT_BUNDLE}" > ./license-plists-merger-macos.artifactbundle.zip
       
       - name: Compute Checksum
         run: |

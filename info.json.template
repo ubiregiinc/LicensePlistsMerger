@@ -7,7 +7,7 @@
       "variants": [
         {
           "path": "license-plists-merger-__VERSION__-macos/bin/license-plists-merger",
-          "suportedTriples": [
+          "supportedTriples": [
             "x86_64-apple-macosx",
             "arm64-apple-macosx"
           ]

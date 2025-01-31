@@ -45,6 +45,9 @@ struct LicensesPlistMerger: ParsableCommand {
     @Option(name: .long, help: "LicenseListのplistのpath")
     var licenseListPlistPath: String?
 
+    @Option(name: .long, help: "他のライセンスファイルのディレクトリのpath")
+    var otherLicensesDirectoryPath: String?
+
     @Option(name: .long, help: "出力するplistのスタイル(license-plist/license-list)")
     var style: String?
 
@@ -90,7 +93,9 @@ struct LicensesPlistMerger: ParsableCommand {
             #endif
         }
 
-        let licenses = (cocoapodsLicenses + licenseListLicenses).sorted { lhs, rhs in
+        let otherLicenses = otherLicensesDirectoryPath.flatMap { Self.otherLicenses(directoryURL: URL(filePath: $0)) } ?? []
+
+        let licenses = (cocoapodsLicenses + licenseListLicenses + otherLicenses).sorted { lhs, rhs in
             // 大文字小文字区別なしでソート
             return lhs.name.localizedCompare(rhs.name) == .orderedAscending
         }
@@ -152,6 +157,44 @@ extension LicensesPlistMerger {
         return array.compactMap { dictionary in
             guard let name = dictionary["name"], let body = dictionary["licenseBody"] else { return nil }
             return LicenseInfo(name: name, body: body.replacingOccurrences(of: "\u{0c}", with: ""))
+        }
+    }
+
+    static func otherLicenses(directoryURL: URL) -> [LicenseInfo]? {
+        let fileManager = FileManager.default
+        var isDirectory: ObjCBool = false
+        let exists = fileManager.fileExists(atPath: directoryURL.path(), isDirectory: &isDirectory)
+        guard exists && isDirectory.boolValue else { return nil }
+
+        do {
+            let directories = try fileManager.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil).compactMap { url in
+                var directory: ObjCBool = false
+                _ = fileManager.fileExists(atPath: url.path(), isDirectory: &directory)
+
+                return directory.boolValue ? url : nil
+            }
+            return directories.compactMap { otherLicense(directoryURL: $0) }
+        } catch {
+            print(error)
+            return nil
+        }
+    }
+
+    static func otherLicense(directoryURL: URL) -> LicenseInfo? {
+        do {
+            let fileManager = FileManager.default
+            let files = try fileManager.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil)
+            let licenseURL = files.first { url in
+                let name = url.deletingPathExtension().lastPathComponent
+                return name == "LICENSE" || name == "LICENCE"
+            }
+            guard let licenseURL,
+                  let body = String(data: try Data(contentsOf: licenseURL), encoding: .utf8) else { return nil }
+
+            return LicenseInfo(name: directoryURL.lastPathComponent, body: body)
+        } catch {
+            print(error)
+            return nil
         }
     }
 

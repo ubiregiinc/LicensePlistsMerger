@@ -15,5 +15,5 @@ CocoaPodsやSwift Package Managerのライブラリのライブラリ表示を�
 ```
 git clone https://github.com/ubiregiinc/LicensePlistsMerger.git
 cd LicensePlistsMerger
-swift run license-plists-merger --cocoapods-plist-path Pods-Acknowledgements.plist --license-list-plist-path license-list.plist -o Acknowledgements.plist
+swift run license-plists-merger Pods-Acknowledgements.plist license-list.plist -o Acknowledgements.plist
 ```

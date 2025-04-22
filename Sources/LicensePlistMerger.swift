@@ -39,11 +39,8 @@ struct LicensesPlistMerger: ParsableCommand {
         }
     }
 
-    @Option(name: .long, help: "CocoaPodsのplistのpath")
-    var cocoapodsPlistPath: String?
-
-    @Option(name: .long, help: "LicenseListのplistのpath")
-    var licenseListPlistPath: String?
+    @Argument(help: "統合したいライセンスファイルのpath")
+    var inputs: [String]
 
     @Option(name: .long, help: "他のライセンスファイルのディレクトリのpath")
     var otherLicensesDirectoryPath: String?
@@ -55,47 +52,13 @@ struct LicensesPlistMerger: ParsableCommand {
     var output: String?
 
     func run() throws {
-        guard let cocoapodsPlistPath else {
-            print("cocoapods-plist-path not set!")
-            #if canImport(Darwin)
-            Darwin.exit(1)
-            #else
-            return
-            #endif
-        }
-        guard let licenseListPlistPath else {
-            print("license-list-plist-path not set!")
-            #if canImport(Darwin)
-            Darwin.exit(1)
-            #else
-            return
-            #endif
-        }
-
-        let cocoapodsURL = URL(filePath: cocoapodsPlistPath)
-
-        guard let cocoapodsLicenses = Self.cocoapodsLicenses(fileURL: cocoapodsURL) else {
-            print("cocoapods licenses processing error")
-            #if canImport(Darwin)
-            Darwin.exit(1)
-            #else
-            return
-            #endif
-        }
-
-        let licenseListURL = URL(filePath: licenseListPlistPath)
-        guard let licenseListLicenses = Self.licenseListLicenses(fileURL: licenseListURL) else {
-            print("LicenseList licenses processing error")
-            #if canImport(Darwin)
-            Darwin.exit(1)
-            #else
-            return
-            #endif
-        }
+        var licenses = inputs
+            .compactMap { Self.loadPlist(fileURL: URL(filePath: $0)) }
+            .flatMap { $0 }
 
         let otherLicenses = otherLicensesDirectoryPath.flatMap { Self.otherLicenses(directoryURL: URL(filePath: $0)) } ?? []
 
-        let licenses = (cocoapodsLicenses + licenseListLicenses + otherLicenses).sorted { lhs, rhs in
+        licenses = (licenses + otherLicenses).sorted { lhs, rhs in
             // 大文字小文字区別なしでソート
             return lhs.name.localizedCompare(rhs.name) == .orderedAscending
         }
@@ -132,13 +95,22 @@ struct LicensesPlistMerger: ParsableCommand {
 }
 
 extension LicensesPlistMerger {
-    static func cocoapodsLicenses(fileURL: URL) -> [LicenseInfo]? {
+    static func loadPlist(fileURL: URL) -> [LicenseInfo]? {
         guard let data = try? Data(contentsOf: fileURL),
               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
-              let plist = plist as? [AnyHashable: Any],
-              let array = plist["PreferenceSpecifiers"] as? [[String: String]] else { return nil }
+              let plist = plist as? [AnyHashable: Any] else { return nil }
 
-        return array.compactMap { dictionary in
+        if let array = plist["PreferenceSpecifiers"] as? [[String: String]] {
+            return Self.cocoapodsLicenses(array: array)
+        } else if let array = plist["libraries"] as? [[String: String]] {
+            return Self.licenseListLicenses(array: array)
+        } else {
+            return nil
+        }
+    }
+
+    static func cocoapodsLicenses(array: [[String: String]]) -> [LicenseInfo] {
+        array.compactMap { dictionary in
             guard let name = dictionary["Title"],
                   !name.isEmpty,
                   name != "Acknowledgements", // CocoaPodsが挿入する項目
@@ -148,13 +120,8 @@ extension LicensesPlistMerger {
         }
     }
 
-    static func licenseListLicenses(fileURL: URL) -> [LicenseInfo]? {
-        guard let data = try? Data(contentsOf: fileURL),
-              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
-              let plist = plist as? [AnyHashable: Any],
-              let array = plist["libraries"] as? [[String: String]] else { return nil }
-
-        return array.compactMap { dictionary in
+    static func licenseListLicenses(array: [[String: String]]) -> [LicenseInfo] {
+        array.compactMap { dictionary in
             guard let name = dictionary["name"], let body = dictionary["licenseBody"] else { return nil }
             return LicenseInfo(name: name, body: body.replacingOccurrences(of: "\u{0c}", with: ""))
         }

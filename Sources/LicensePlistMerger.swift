@@ -158,7 +158,7 @@ extension LicensesPlistMerger {
             guard let licenseURL,
                   let body = String(data: try Data(contentsOf: licenseURL), encoding: .utf8) else { return nil }
 
-            return LicenseInfo(name: directoryURL.lastPathComponent, body: body)
+            return LicenseInfo(name: directoryURL.lastPathComponent, body: body.replacingOccurrences(of: "\u{0c}", with: ""))
         } catch {
             print(error)
             return nil
